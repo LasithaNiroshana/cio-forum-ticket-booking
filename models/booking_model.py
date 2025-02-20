@@ -1,0 +1,32 @@
+from typing import Optional
+
+from pydantic import BaseModel, Field
+from enum import Enum
+
+
+# class PaymentStatus(int, Enum):
+#     NOT_PAID = 0
+#     PAID = 1
+
+
+class BookingSchema(BaseModel):
+    full_name: str = Field(...)
+    email: str = Field(...)
+    phone_number: str = Field(...)
+    ticket_count: int = Field(...)
+    amount: int = Field(...)
+    bank_slip: Optional[str] = Field(None)
+    paid_status: int = Field(...)  # not paid=0 paid=1
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "full_name": "John Doe",
+                "email": "johndoe@gmail.com",
+                "phone_number": "0711231234",
+                "ticket_count": 2,
+                "amount": 2000,
+                "bank_slip": "https://www.eticketing.com/images/000123",
+                "paid_status": 1
+            }
+        }
