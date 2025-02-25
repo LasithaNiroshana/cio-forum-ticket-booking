@@ -43,7 +43,7 @@ async def reserve_forum_tickets(request: Request, booking_details: BookingSchema
 
             logger.info(f"Received bank slip file: {bank_slip_file.filename}")
             # Generate a unique filename based on user's full name and timestamp
-            file_name = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{booking_details.full_name}"
+            file_name = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{booking_details.full_name.strip().replace(' ', '_')}"
             file_location = upload_image(bank_slip_file, UPLOAD_DIR, file_name=file_name)
 
             if not file_location:
