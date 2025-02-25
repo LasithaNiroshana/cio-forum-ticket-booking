@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, Query, UploadFile, File, Request
 from controllers.booking_controller import reserve_forum_tickets
 from models.booking_model import BookingSchema
@@ -17,7 +19,8 @@ async def reserve_tickets(
         ticket_count: int,
         amount: int,
         paid_status: int,
-        bank_slip_file: UploadFile = File(None), ):
+        email_confirmed: int,
+        bank_slip_file: Optional[UploadFile] = File(None)):
     booking_details = BookingSchema(
         full_name=full_name,
         email=email,
@@ -25,6 +28,7 @@ async def reserve_tickets(
         ticket_count=ticket_count,
         amount=amount,
         paid_status=paid_status,
+        email_confirmed=email_confirmed
     )
 
     return await reserve_forum_tickets(booking_details=booking_details, bank_slip_file=bank_slip_file, request=request)

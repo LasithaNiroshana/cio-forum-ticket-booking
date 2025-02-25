@@ -1,4 +1,4 @@
-from fastapi import HTTPException
+from fastapi.responses import JSONResponse
 
 
 def response_model(data, message):
@@ -11,4 +11,7 @@ def response_model(data, message):
 
 
 def error_response_model(error="Server error", code=500):
-    raise HTTPException(status_code=code, detail=error)
+    return JSONResponse(
+        status_code=code,
+        content={"detail": error}
+    )

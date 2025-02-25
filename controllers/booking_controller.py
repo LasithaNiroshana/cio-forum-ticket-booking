@@ -2,10 +2,13 @@ import os
 import uuid
 from datetime import datetime
 import logging
+from typing import Optional
+
 from bson import ObjectId
-from fastapi import UploadFile, Request
+from fastapi import UploadFile, Request, HTTPException
 from configparser import ConfigParser
 
+from controllers.email_controller import send_booking_email
 from models.booking_model import BookingSchema
 from models.response_model import response_model, error_response_model
 from database.database import get_db
@@ -21,16 +24,24 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-async def reserve_forum_tickets(request: Request, booking_details: BookingSchema, bank_slip_file: UploadFile = None):
+async def reserve_forum_tickets(request: Request, booking_details: BookingSchema, bank_slip_file: Optional[UploadFile] = None):
     try:
-        logger.info(f"Reserving tickets for: {booking_details.full_name}")
         db = await get_db()
 
-        if booking_details.paid_status == 1 and not bank_slip_file:
-            return error_response_model("Bank slip file is required when status is paid.", code=400)
+        # Check if email is not confirmed
+        if booking_details.email_confirmed == 0:
+            return error_response_model("Email address is not verified!.", code=400)
+
+        base_url = str(request.base_url).rstrip("/")
         bank_slip_url = None
 
-        if bank_slip_file:
+        # Handle bank slip file upload only if paid_status is 1
+        if booking_details.paid_status == 1:
+            if not bank_slip_file:
+                logger.error("Bank slip file is required when status is paid.")
+                return error_response_model("Bank slip file is required when status is paid.", code=400)
+
+            logger.info(f"Received bank slip file: {bank_slip_file.filename}")
             # Generate a unique filename based on user's full name and timestamp
             file_name = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{booking_details.full_name}"
             file_location = upload_image(bank_slip_file, UPLOAD_DIR, file_name=file_name)
@@ -38,7 +49,6 @@ async def reserve_forum_tickets(request: Request, booking_details: BookingSchema
             if not file_location:
                 return error_response_model("Failed to upload bank slip.", code=500)
 
-            base_url = str(request.base_url).rstrip("/")
             bank_slip_path = "/" + file_location.replace("public\\", "").replace("\\", "/")
             bank_slip_url = base_url + bank_slip_path
 
@@ -51,16 +61,65 @@ async def reserve_forum_tickets(request: Request, booking_details: BookingSchema
         result = await db["bookings"].insert_one(booking_data)
 
         if result.inserted_id:
-            logger.info(f"Booking saved with ID: {result.inserted_id}")
             booking_data["_id"] = str(result.inserted_id)
+
+            # Send email to the user based on paid_status
+            if booking_details.paid_status == 1:
+                # Payment is done, send confirmation email
+                email_subject = "Payment Done for Booking"
+                email_body = f"""
+                    Dear {booking_details.full_name},
+
+                    Your payment for the booking has been successfully processed. Below are your booking details:
+
+                    - Booking ID: {result.inserted_id}
+                    - Full Name: {booking_details.full_name}
+                    - Email: {booking_details.email}
+                    - Phone Number: {booking_details.phone_number}
+                    - Ticket Count: {booking_details.ticket_count}
+                    - Amount: {booking_details.amount}
+                    - Bank Slip: {bank_slip_url}
+
+                    Thank you for choosing our service!
+
+                    Best regards,
+                    Your Booking Team
+                """
+            else:
+                # Payment is pending, send email with payment slip upload link
+                payment_upload_link = f"{base_url}/upload-payment-slip?booking_id={result.inserted_id}"
+                email_subject = "Payment Pending for Booking"
+                email_body = f"""
+                    Dear {booking_details.full_name},
+
+                    Your booking has been successfully created. However, the payment is still pending. Please upload your payment slip using the link below:
+
+                    Payment Slip Upload Link: {payment_upload_link}
+
+                    Below are your booking details:
+
+                    - Booking ID: {result.inserted_id}
+                    - Full Name: {booking_details.full_name}
+                    - Email: {booking_details.email}
+                    - Phone Number: {booking_details.phone_number}
+                    - Ticket Count: {booking_details.ticket_count}
+                    - Amount: {booking_details.amount}
+
+                    Thank you for choosing our service!
+
+                    Best regards,
+                    Your Booking Team
+                """
+
+            # Send the email
+            await send_booking_email(booking_details.email, email_subject, email_body)
+
             return response_model(booking_data, "Tickets reserved successfully.")
         else:
-            logger.error("Failed to save booking to the database.")
             return error_response_model("Failed to reserve tickets.", code=500)
 
     except Exception as e:
-        logger.error(f"Error reserving tickets: {e}")
-        return error_response_model("An error occurred while reserving tickets.", code=500)
+        return error_response_model(f"An error occurred while reserving tickets:{e}", code=500)
 
 
 def upload_image(file: UploadFile, upload_path: str, old_image: str = '', file_name: str = None):

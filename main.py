@@ -5,6 +5,7 @@ from starlette.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from routers.booking_router import bookingRouter
+from routers.email_router import emailRouter
 import logging
 
 
@@ -58,6 +59,7 @@ app.add_middleware(
 app.mount("/public", StaticFiles(directory="public"), name="public")
 
 app.include_router(bookingRouter)
+app.include_router(emailRouter)
 
 
 if __name__ == '__main__':

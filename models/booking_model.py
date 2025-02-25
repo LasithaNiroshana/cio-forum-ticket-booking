@@ -17,16 +17,25 @@ class BookingSchema(BaseModel):
     amount: int = Field(...)
     bank_slip: Optional[str] = Field(None)
     paid_status: int = Field(...)  # not paid=0 paid=1
+    email_confirmed: int = Field(...)  # not confirmed=0 confirmed=1
 
     class Config:
         json_schema_extra = {
             "example": {
                 "full_name": "John Doe",
-                "email": "johndoe@gmail.com",
+                "emails": "johndoe@gmail.com",
                 "phone_number": "0711231234",
                 "ticket_count": 2,
                 "amount": 2000,
                 "bank_slip": "https://www.eticketing.com/images/000123",
-                "paid_status": 1
+                "paid_status": 1,
+                "email_confirmed": 1
             }
         }
+
+
+class OTPConfirmation(BaseModel):
+    email: str
+    otp: str
+
+
