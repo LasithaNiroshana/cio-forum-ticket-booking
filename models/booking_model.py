@@ -17,7 +17,7 @@ class BookingSchema(BaseModel):
     amount: int = Field(...)
     bank_slip: Optional[str] = Field(None)
     paid_status: int = Field(...)  # not paid=0 paid=1
-    email_confirmed: int = Field(...)  # not confirmed=0 confirmed=1
+    email_confirmed: Optional[int] = 0  # not confirmed=0 confirmed=1
 
     class Config:
         json_schema_extra = {

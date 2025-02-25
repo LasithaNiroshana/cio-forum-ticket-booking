@@ -153,3 +153,21 @@ def upload_image(file: UploadFile, upload_path: str, old_image: str = '', file_n
         # Handle cases where file upload fails
         print(f"Error uploading video: {e}")
         return False
+
+
+async def get_all_bookings():
+    try:
+        db = await get_db()
+        bookings = await db["bookings"].find().to_list(length=None)
+        booking_list = []
+        for booking in bookings:
+            booking["_id"] = str(booking["_id"])  # Convert ObjectId to string
+            booking.setdefault("email_confirmed", 0)
+            booking.setdefault("bank_slip", None)
+            booking.setdefault("created_at", None)
+
+            booking_list.append(BookingSchema(**booking))
+        return response_model(booking_list, "All bookings retrieved successfully.")
+
+    except Exception as e:
+        return error_response_model(f"An error occurred while fetching bookings:  {e}", code=500)

@@ -1,7 +1,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, UploadFile, File, Request
-from controllers.booking_controller import reserve_forum_tickets
+from controllers.booking_controller import reserve_forum_tickets, get_all_bookings
 from models.booking_model import BookingSchema
 
 bookingRouter = APIRouter(
@@ -32,3 +32,9 @@ async def reserve_tickets(
     )
 
     return await reserve_forum_tickets(booking_details=booking_details, bank_slip_file=bank_slip_file, request=request)
+
+
+@bookingRouter.get("/get-all-bookings")
+async def get_bookings():
+    return await get_all_bookings()
+
