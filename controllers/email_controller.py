@@ -58,7 +58,7 @@ def send_email_with_otp(recipient_email):
 
     except Exception as e:
         print(f"Failed to send OTP email: {e}")
-        return error_response_model("An error occurred while sending email.", code=500)
+        return error_response_model(f"An error occurred while sending email: {e}", code=500)
 
 
 async def confirm_email(confirmation: OTPConfirmation):
@@ -93,7 +93,6 @@ async def send_booking_email(recipient_email: str, subject: str, body: str):
         msg['To'] = recipient_email
         msg['Subject'] = subject
 
-        # Attach the body to the email
         msg.attach(MIMEText(body, 'plain'))
 
         # Connect to the SMTP server
@@ -107,4 +106,4 @@ async def send_booking_email(recipient_email: str, subject: str, body: str):
         server.quit()
 
     except Exception as e:
-        raise Exception(f"Failed to send email:{e}")
+        return error_response_model(f"Failed to send email: {e}", code=500)

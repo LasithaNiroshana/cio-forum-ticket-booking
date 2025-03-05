@@ -10,6 +10,7 @@ from enum import Enum
 
 
 class BookingSchema(BaseModel):
+    # _id: Optional[str] = None
     full_name: str = Field(...)
     email: str = Field(...)
     phone_number: str = Field(...)
@@ -22,6 +23,7 @@ class BookingSchema(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
+                # "_id": "65f8c2a1e6b7c927d5f3a6b9",
                 "full_name": "John Doe",
                 "emails": "johndoe@gmail.com",
                 "phone_number": "0711231234",

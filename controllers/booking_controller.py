@@ -57,7 +57,6 @@ async def reserve_forum_tickets(request: Request, booking_details: BookingSchema
         booking_data["created_at"] = datetime.utcnow()
         booking_data["bank_slip"] = bank_slip_url
 
-        # Save the booking to the database
         result = await db["bookings"].insert_one(booking_data)
 
         if result.inserted_id:
@@ -119,7 +118,7 @@ async def reserve_forum_tickets(request: Request, booking_details: BookingSchema
             return error_response_model("Failed to reserve tickets.", code=500)
 
     except Exception as e:
-        return error_response_model(f"An error occurred while reserving tickets:{e}", code=500)
+        return error_response_model(f"An error occurred while reserving tickets: {e}", code=500)
 
 
 def upload_image(file: UploadFile, upload_path: str, old_image: str = '', file_name: str = None):
@@ -147,12 +146,12 @@ def upload_image(file: UploadFile, upload_path: str, old_image: str = '', file_n
 
         else:
             print(f"Invalid image format: {file_extension}")
-        return False
+        return error_response_model(f"Invalid image format: {file_extension}", code=500)
 
     except Exception as e:
         # Handle cases where file upload fails
-        print(f"Error uploading video: {e}")
-        return False
+        print(f"Error uploading image: {e}")
+        return error_response_model(f"Error uploading image: {e}", code=500)
 
 
 async def get_all_bookings():
@@ -161,7 +160,7 @@ async def get_all_bookings():
         bookings = await db["bookings"].find().to_list(length=None)
         booking_list = []
         for booking in bookings:
-            booking["_id"] = str(booking["_id"])  # Convert ObjectId to string
+            booking["_id"] = str(booking["_id"]) if "_id" in booking else None
             booking.setdefault("email_confirmed", 0)
             booking.setdefault("bank_slip", None)
             booking.setdefault("created_at", None)
@@ -170,4 +169,4 @@ async def get_all_bookings():
         return response_model(booking_list, "All bookings retrieved successfully.")
 
     except Exception as e:
-        return error_response_model(f"An error occurred while fetching bookings:  {e}", code=500)
+        return error_response_model(f"An error occurred while fetching bookings: {e}", code=500)
