@@ -1,7 +1,7 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, UploadFile, File, Request
-from controllers.booking_controller import reserve_forum_tickets, get_all_bookings
+from fastapi import APIRouter, Depends, Query, UploadFile, File, Request, Form
+from controllers.booking_controller import reserve_forum_tickets, get_all_bookings, get_booking_by_id
 from models.booking_model import BookingSchema
 
 bookingRouter = APIRouter(
@@ -13,13 +13,13 @@ bookingRouter = APIRouter(
 @bookingRouter.post("/reserve-tickets")
 async def reserve_tickets(
         request: Request,
-        full_name: str,
-        email: str,
-        phone_number: str,
-        ticket_count: int,
-        amount: int,
-        paid_status: int,
-        email_confirmed: int,
+        full_name: str = Form(...),
+        email: str = Form(...),
+        phone_number: str = Form(...),
+        ticket_count: int = Form(...),
+        amount: int = Form(...),
+        paid_status: int = Form(...),
+        email_confirmed: int = Form(...),
         bank_slip_file: Optional[UploadFile] = File(None)):
     booking_details = BookingSchema(
         full_name=full_name,
@@ -31,7 +31,12 @@ async def reserve_tickets(
         email_confirmed=email_confirmed
     )
 
-    return await reserve_forum_tickets(booking_details=booking_details, bank_slip_file=bank_slip_file, request=request)
+    return await reserve_forum_tickets(request=request, booking_details=booking_details, bank_slip_file=bank_slip_file)
+
+
+@bookingRouter.get("/get-booking/")
+async def get_booking(booking_id: str = Query(..., description="The ID of the booking to retrieve")):
+    return await get_booking_by_id(booking_id)
 
 
 @bookingRouter.get("/get-all-bookings")

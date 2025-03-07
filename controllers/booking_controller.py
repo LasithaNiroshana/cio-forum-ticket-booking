@@ -53,7 +53,7 @@ async def reserve_forum_tickets(request: Request, booking_details: BookingSchema
             bank_slip_url = base_url + bank_slip_path
 
         # Prepare the booking data
-        booking_data = booking_details.dict()
+        booking_data = booking_details.model_dump()
         booking_data["created_at"] = datetime.utcnow()
         booking_data["bank_slip"] = bank_slip_url
 
@@ -154,18 +154,39 @@ def upload_image(file: UploadFile, upload_path: str, old_image: str = '', file_n
         return error_response_model(f"Error uploading image: {e}", code=500)
 
 
+async def get_booking_by_id(booking_id: str):
+    try:
+        db = await get_db()
+        booking = await db["bookings"].find_one({"_id": ObjectId(booking_id)})
+
+        if booking:
+            booking["_id"] = str(booking["_id"]) if "_id" in booking else None
+            booking.setdefault("email_confirmed", 0)
+            booking.setdefault("bank_slip", None)
+            booking.setdefault("created_at", None)
+
+            return response_model(BookingSchema(**booking), "Booking details retrieved successfully.")
+        else:
+            return error_response_model("Booking not found.", code=404)
+
+    except Exception as e:
+        return error_response_model(f"An error occurred while fetching the booking: {e}", code=500)
+
+
 async def get_all_bookings():
     try:
         db = await get_db()
         bookings = await db["bookings"].find().to_list(length=None)
         booking_list = []
         for booking in bookings:
-            booking["_id"] = str(booking["_id"]) if "_id" in booking else None
+            # print("Raw booking document:", booking)
+            booking["_id"] = str(booking["_id"])
+            # print("Booking after _id conversion:", booking)
             booking.setdefault("email_confirmed", 0)
             booking.setdefault("bank_slip", None)
             booking.setdefault("created_at", None)
 
-            booking_list.append(BookingSchema(**booking))
+            booking_list.append(booking)
         return response_model(booking_list, "All bookings retrieved successfully.")
 
     except Exception as e:

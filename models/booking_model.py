@@ -10,20 +10,20 @@ from enum import Enum
 
 
 class BookingSchema(BaseModel):
-    # _id: Optional[str] = None
+    _id: Optional[str] = None
     full_name: str = Field(...)
     email: str = Field(...)
     phone_number: str = Field(...)
     ticket_count: int = Field(...)
     amount: int = Field(...)
-    bank_slip: Optional[str] = Field(None)
+    bank_slip: Optional[str] = None
     paid_status: int = Field(...)  # not paid=0 paid=1
     email_confirmed: Optional[int] = 0  # not confirmed=0 confirmed=1
 
     class Config:
         json_schema_extra = {
             "example": {
-                # "_id": "65f8c2a1e6b7c927d5f3a6b9",
+                "_id": "65f8c2a1e6b7c927d5f3a6b9",
                 "full_name": "John Doe",
                 "emails": "johndoe@gmail.com",
                 "phone_number": "0711231234",
