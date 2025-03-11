@@ -36,7 +36,7 @@ class BookingSchema(BaseModel):
             "example": {
                 "_id": "65f8c2a1e6b7c927d5f3a6b9",
                 "full_name": "John Doe",
-                "emails": "johndoe@gmail.com",
+                "email": "johndoe@gmail.com",
                 "phone_number": "0711231234",
                 "ticket_count": 2,
                 "amount": 2000,

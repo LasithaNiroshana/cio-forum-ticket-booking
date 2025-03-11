@@ -60,7 +60,7 @@ async def reserve_forum_tickets(request: Request, booking_details):
 
         # Prepare the booking data
         booking_data = booking_details.model_dump()
-        booking_data["created_at"] = datetime.utcnow()
+        booking_data["created_at"] = datetime.now(timezone.utc)
         booking_data["bank_slip"] = bank_slip_url
 
         result = await db["bookings"].insert_one(booking_data)
