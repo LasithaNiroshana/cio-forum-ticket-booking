@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, UploadFile, File, Request, Form
+from fastapi import APIRouter, Depends, Query, UploadFile, File, Request, Form, Body
 from controllers.booking_controller import reserve_forum_tickets, get_all_bookings, get_booking_by_id
 from models.booking_model import BookingSchema
 
@@ -13,25 +13,9 @@ bookingRouter = APIRouter(
 @bookingRouter.post("/reserve-tickets")
 async def reserve_tickets(
         request: Request,
-        full_name: str = Form(...),
-        email: str = Form(...),
-        phone_number: str = Form(...),
-        ticket_count: int = Form(...),
-        amount: int = Form(...),
-        paid_status: int = Form(...),
-        email_confirmed: int = Form(...),
-        bank_slip_file: Optional[UploadFile] = File(None)):
-    booking_details = BookingSchema(
-        full_name=full_name,
-        email=email,
-        phone_number=phone_number,
-        ticket_count=ticket_count,
-        amount=amount,
-        paid_status=paid_status,
-        email_confirmed=email_confirmed
-    )
+        booking: BookingSchema = Body(...)):
 
-    return await reserve_forum_tickets(request=request, booking_details=booking_details, bank_slip_file=bank_slip_file)
+    return await reserve_forum_tickets(request=request, booking_details=booking)
 
 
 @bookingRouter.get("/get-booking/")

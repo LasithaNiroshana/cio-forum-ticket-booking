@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from enum import Enum
 
 
@@ -18,7 +18,18 @@ class BookingSchema(BaseModel):
     amount: int = Field(...)
     bank_slip: Optional[str] = None
     paid_status: int = Field(...)  # not paid=0 paid=1
-    email_confirmed: Optional[int] = 0  # not confirmed=0 confirmed=1
+    email_confirmed: int = Field(...)  # not confirmed=0 confirmed=1
+
+    @field_validator("bank_slip")
+    def validate_bank_slip(cls, value):
+        if value is None:
+            return value
+
+        # Allow URLs or base64-encoded strings
+        if value.startswith("http://") or value.startswith("https://") or value.startswith("data:image/"):
+            return value
+        else:
+            raise ValueError("bank_slip must be a URL or a base64-encoded image")
 
     class Config:
         json_schema_extra = {
@@ -29,15 +40,11 @@ class BookingSchema(BaseModel):
                 "phone_number": "0711231234",
                 "ticket_count": 2,
                 "amount": 2000,
-                "bank_slip": "https://www.eticketing.com/images/000123",
+                "bank_slip": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0a...",
                 "paid_status": 1,
                 "email_confirmed": 1
             }
         }
 
-
-class OTPConfirmation(BaseModel):
-    email: str
-    otp: str
 
 

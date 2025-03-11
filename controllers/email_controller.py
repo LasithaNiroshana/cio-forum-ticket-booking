@@ -5,6 +5,7 @@ import string
 import os
 import time
 from typing import Dict
+import re
 
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
 from configparser import ConfigParser
@@ -12,7 +13,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from configparser import ConfigParser
 
-from models.booking_model import OTPConfirmation
+from models.email_model import OTPConfirmation
 from models.response_model import response_model, error_response_model
 
 config = ConfigParser()
@@ -26,6 +27,12 @@ SENDER_PW = config.get("SMTP", "SENDER_PW")
 
 otp_store: Dict[str, Dict[str, any]] = {}
 
+EMAIL_REGEX = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+
+def validate_email(email):
+    """Validate the email address format."""
+    return re.match(EMAIL_REGEX, email) is not None
+
 
 def generate_otp(length=6):
     """Generate a random OTP of given length"""
@@ -37,6 +44,10 @@ def generate_otp(length=6):
 def send_email_with_otp(recipient_email):
     """Send an OTP email to the user"""
     try:
+        if not validate_email(recipient_email):
+            print(f"Invalid email address: {recipient_email}")
+            return error_response_model("Invalid email address format.", code=400)
+
         otp = generate_otp()
         otp_store[recipient_email] = {"otp": otp, "expires_at": time.time() + 300}
         msg = MIMEMultipart()

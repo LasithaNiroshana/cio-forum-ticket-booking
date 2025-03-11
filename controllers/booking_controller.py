@@ -1,6 +1,7 @@
+import base64
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 from typing import Optional
 
@@ -12,6 +13,7 @@ from controllers.email_controller import send_booking_email
 from models.booking_model import BookingSchema
 from models.response_model import response_model, error_response_model
 from database.database import get_db
+from controllers.image_upload_controller import upload_image
 
 config = ConfigParser()
 config.read(".cfg")
@@ -24,7 +26,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-async def reserve_forum_tickets(request: Request, booking_details: BookingSchema, bank_slip_file: Optional[UploadFile] = None):
+async def reserve_forum_tickets(request: Request, booking_details):
     try:
         db = await get_db()
 
@@ -37,14 +39,18 @@ async def reserve_forum_tickets(request: Request, booking_details: BookingSchema
 
         # Handle bank slip file upload only if paid_status is 1
         if booking_details.paid_status == 1:
-            if not bank_slip_file:
+            if not booking_details.bank_slip:
                 logger.error("Bank slip file is required when status is paid.")
                 return error_response_model("Bank slip file is required when status is paid.", code=400)
 
-            logger.info(f"Received bank slip file: {bank_slip_file.filename}")
-            # Generate a unique filename based on user's full name and timestamp
-            file_name = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{booking_details.full_name.strip().replace(' ', '_')}"
-            file_location = upload_image(bank_slip_file, UPLOAD_DIR, file_name=file_name)
+            # Validate base64 data
+            if not booking_details.bank_slip.startswith("data:image/"):
+                logger.error("Invalid base64 image data.")
+                return error_response_model("Invalid base64 image data.", code=400)
+
+            logger.info("Received bank slip file as base64 data.")
+            file_name = f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}_{booking_details.full_name.strip().replace(' ', '_')}"
+            file_location = upload_image(booking_details.bank_slip, UPLOAD_DIR, file_name=file_name)
 
             if not file_location:
                 return error_response_model("Failed to upload bank slip.", code=500)
@@ -64,7 +70,6 @@ async def reserve_forum_tickets(request: Request, booking_details: BookingSchema
 
             # Send email to the user based on paid_status
             if booking_details.paid_status == 1:
-                # Payment is done, send confirmation email
                 email_subject = "Payment Done for Booking"
                 email_body = f"""
                     Dear {booking_details.full_name},
@@ -85,7 +90,6 @@ async def reserve_forum_tickets(request: Request, booking_details: BookingSchema
                     Your Booking Team
                 """
             else:
-                # Payment is pending, send email with payment slip upload link
                 payment_upload_link = f"{base_url}/upload-payment-slip?booking_id={result.inserted_id}"
                 email_subject = "Payment Pending for Booking"
                 email_body = f"""
@@ -118,40 +122,8 @@ async def reserve_forum_tickets(request: Request, booking_details: BookingSchema
             return error_response_model("Failed to reserve tickets.", code=500)
 
     except Exception as e:
-        return error_response_model(f"An error occurred while reserving tickets: {e}", code=500)
-
-
-def upload_image(file: UploadFile, upload_path: str, old_image: str = '', file_name: str = None):
-    try:
-        allowed_file_formats = ['.jpg', '.jpeg', '.pdf']
-        _, file_extension = os.path.splitext(file.filename)
-
-        if file_extension.lower() in allowed_file_formats:
-            if old_image and os.path.exists(old_image):
-                os.remove(old_image)
-
-            if not os.path.isdir(upload_path):
-                os.makedirs(upload_path)
-
-            if file_name:
-                filename = file_name + file_extension
-            else:
-                filename = f"{uuid.uuid4().hex[:20].upper()}{file_extension}"
-
-            file_location = os.path.join(upload_path, filename)
-            with open(file_location, "wb") as f:
-                f.write(file.file.read())
-
-            return file_location
-
-        else:
-            print(f"Invalid image format: {file_extension}")
-        return error_response_model(f"Invalid image format: {file_extension}", code=500)
-
-    except Exception as e:
-        # Handle cases where file upload fails
-        print(f"Error uploading image: {e}")
-        return error_response_model(f"Error uploading image: {e}", code=500)
+        logger.error(f"An error occurred while reserving tickets: {e}", exc_info=True)
+        return error_response_model(f"An error occurred while reserving tickets: {str(e)}", code=500)
 
 
 async def get_booking_by_id(booking_id: str):

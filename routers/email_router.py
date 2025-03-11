@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, Query, UploadFile, File, Request
+from fastapi import APIRouter, Depends, Query, UploadFile, File, Request, Form
 from controllers.email_controller import send_email_with_otp, confirm_email
-from models.booking_model import OTPConfirmation
+from models.email_model import EmailRequest, OTPConfirmation
 
 emailRouter = APIRouter(
     prefix="/email",
@@ -9,8 +9,8 @@ emailRouter = APIRouter(
 
 
 @emailRouter.post("/send-email-otp")
-async def reserve_tickets(email: str):
-    return send_email_with_otp(email)
+async def reserve_tickets(email_request: EmailRequest):
+    return send_email_with_otp(email_request.email)
 
 
 @emailRouter.post("/verify-email")
