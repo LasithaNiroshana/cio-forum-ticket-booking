@@ -1,13 +1,5 @@
-from typing import Optional
-
 from pydantic import BaseModel, Field, field_validator
-from enum import Enum
-
-
-# class PaymentStatus(int, Enum):
-#     NOT_PAID = 0
-#     PAID = 1
-
+from typing import Optional
 
 class BookingSchema(BaseModel):
     _id: Optional[str] = None
@@ -25,11 +17,23 @@ class BookingSchema(BaseModel):
         if value is None:
             return value
 
-        # Allow URLs or base64-encoded strings
-        if value.startswith("http://") or value.startswith("https://") or value.startswith("data:image/"):
+        value = value.strip()  # Remove leading/trailing whitespace
+
+        print(f"Validating bank_slip: {value}")  # Debugging
+
+        # Allow URLs, base64-encoded images, or base64-encoded PDFs
+        if (
+            value==""
+            or value.startswith("http://")
+            or value.startswith("https://")
+            or value.startswith("data:image/")  # Allow base64-encoded images
+            or value.startswith("data:application/pdf;base64,")  # Allow base64-encoded PDFs
+        ):
+            print("Validation passed")  # Debugging
             return value
         else:
-            raise ValueError("bank_slip must be a URL or a base64-encoded image")
+            print("Validation failed")  # Debugging
+            raise ValueError("Bank_slip must be a URL, a base64-encoded image, or a base64-encoded PDF")
 
     class Config:
         json_schema_extra = {
@@ -45,6 +49,3 @@ class BookingSchema(BaseModel):
                 "email_confirmed": 1
             }
         }
-
-
-

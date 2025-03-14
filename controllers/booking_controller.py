@@ -18,6 +18,7 @@ from controllers.image_upload_controller import upload_image
 config = ConfigParser()
 config.read(".cfg")
 BASE_URL = config.get("ENVIRONMENT", "BASE_URL", fallback="http://127.0.0.1:8000/".rstrip("/"))
+WEB_URL ="http://localhost:4200/"
 
 UPLOAD_DIR = "public/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -26,13 +27,14 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-async def reserve_forum_tickets(request: Request, booking_details):
+async def reserve_forum_tickets(request: Request, booking_details: BookingSchema):
     try:
         db = await get_db()
 
         # Check if email is not confirmed
         if booking_details.email_confirmed == 0:
             return error_response_model("Email address is not verified!.", code=400)
+
 
         base_url = str(request.base_url).rstrip("/")
         bank_slip_url = None
@@ -44,17 +46,27 @@ async def reserve_forum_tickets(request: Request, booking_details):
                 return error_response_model("Bank slip file is required when status is paid.", code=400)
 
             # Validate base64 data
-            if not booking_details.bank_slip.startswith("data:image/"):
-                logger.error("Invalid base64 image data.")
-                return error_response_model("Invalid base64 image data.", code=400)
+            if not (
+                booking_details.bank_slip.startswith("data:image/")  # Allow base64-encoded images
+                or booking_details.bank_slip.startswith("data:application/pdf;base64,")  # Allow base64-encoded PDFs
+            ):
+                logger.error("Invalid base64 data. Must be an image or PDF.")
+                return error_response_model("Invalid base64 data. Must be an image or PDF.", code=400)
 
-            logger.info("Received bank slip file as base64 data.")
+            # Generate a unique file name
             file_name = f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}_{booking_details.full_name.strip().replace(' ', '_')}"
-            file_location = upload_image(booking_details.bank_slip, UPLOAD_DIR, file_name=file_name)
 
-            if not file_location:
-                return error_response_model("Failed to upload bank slip.", code=500)
+            # Upload the bank slip file
+            try:
+                file_location = upload_image(booking_details.bank_slip, UPLOAD_DIR, file_name=file_name)
+            except HTTPException as e:
+                logger.error(f"Failed to upload bank slip: {e.detail}")
+                return error_response_model(f"Failed to upload bank slip: {e.detail}", code=e.status_code)
+            except ValueError as e:
+                logger.error(f"Invalid bank slip data: {str(e)}")
+                return error_response_model(f"Invalid bank slip data: {str(e)}", code=400)
 
+            # Construct the URL for the uploaded file
             bank_slip_path = "/" + file_location.replace("public\\", "").replace("\\", "/")
             bank_slip_url = base_url + bank_slip_path
 
@@ -63,6 +75,7 @@ async def reserve_forum_tickets(request: Request, booking_details):
         booking_data["created_at"] = datetime.now(timezone.utc)
         booking_data["bank_slip"] = bank_slip_url
 
+        # Insert the booking into the database
         result = await db["bookings"].insert_one(booking_data)
 
         if result.inserted_id:
@@ -90,7 +103,7 @@ async def reserve_forum_tickets(request: Request, booking_details):
                     Your Booking Team
                 """
             else:
-                payment_upload_link = f"{base_url}/upload-payment-slip?booking_id={result.inserted_id}"
+                payment_upload_link = f"{WEB_URL}upload-payment-slip?booking_id={result.inserted_id}"
                 email_subject = "Payment Pending for Booking"
                 email_body = f"""
                     Dear {booking_details.full_name},

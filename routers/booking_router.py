@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, UploadFile, File, Request, Form, Body
+from fastapi import APIRouter, Query, Request, Body
 from controllers.booking_controller import reserve_forum_tickets, get_all_bookings, get_booking_by_id
 from models.booking_model import BookingSchema
 
