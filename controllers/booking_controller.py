@@ -18,7 +18,7 @@ from controllers.image_upload_controller import upload_image
 config = ConfigParser()
 config.read(".cfg")
 BASE_URL = config.get("ENVIRONMENT", "BASE_URL", fallback="http://127.0.0.1:8000/".rstrip("/"))
-WEB_URL ="http://localhost:4200/"
+WEB_URL = config.get("WEB", "PORTAL_URL")
 
 UPLOAD_DIR = "public/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -103,7 +103,7 @@ async def reserve_forum_tickets(request: Request, booking_details: BookingSchema
                     Your Booking Team
                 """
             else:
-                payment_upload_link = f"{WEB_URL}upload-payment-slip?booking_id={result.inserted_id}"
+                payment_upload_link = f"{WEB_URL}?booking_id={result.inserted_id}"
                 email_subject = "Payment Pending for Booking"
                 email_body = f"""
                     Dear {booking_details.full_name},
